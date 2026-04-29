@@ -46,7 +46,6 @@ class GenerateTrainingData:
     
 
     def generate_observations(self, X_mat: np.ndarray):
-
         indices = np.arange(1, self.num_features + 1)  # 1-indexed
         noise_scales = self.STD_DEV * np.log(indices)
 
