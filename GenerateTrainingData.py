@@ -33,7 +33,7 @@ class GenerateTrainingData:
                 X[idx] = 5 - X[idx-10]
 
             for idx in range(91, self.num_features):
-                X[idx] = 0.5 * X[50+(idx-90)*4] + 0.5 * X[50+(idx-90)*3] + rng.normal(0, self.STD_DEV)
+                X[idx] = 0.5 * X[50+(idx-90)] + 0.5 * X[50+(idx-80)] + rng.normal(0, self.STD_DEV)
 
             Y = rng.normal(0, 0.1)
             for i in range(1,51):
