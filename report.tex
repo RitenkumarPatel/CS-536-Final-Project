@@ -1,0 +1,30 @@
+\documentclass{article}
+
+\usepackage{hyperref}
+
+\title{CS536 Final Project}
+\author{Author}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Motivation}
+Throughout this course, we have mostly considered learning settings where there is a single entity handling training and testing.
+However, these techniques are not always applicable to scenarios like edge computing and IoT devices.
+Often, there may be multiple devices with disjoint data sets that need to be aggregated to train a shared model.
+These devices may also have bandwidth or privacy requirements, preventing users from directly aggregating data then training.
+This is addressed by techniques in federated learning \cite{yang2019}.
+
+There are several ways data can be split among multiple devices.
+In the first case, each device can hold a subset of the data, recording different events with identical features.
+This is the problem that \underline{horizontal federated learning} solves \cite{li2020}.
+Alternatively, perhaps each device records some information about the same event, but they hold a disjoint set of features.
+We address this problem with \underline{vertical federated learning} \cite{feng2020}.
+
+
+\section{References}
+\bibliographystyle{plain}
+\bibliography{report.bib}
+
+\end{document}
