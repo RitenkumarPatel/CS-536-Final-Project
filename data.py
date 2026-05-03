@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from dataclasses import dataclass
 import numpy as np
 
 
@@ -47,25 +48,48 @@ class CompositeEvent(Event):
         return self.weights @ matrix
 
 
-def case1(
-    n: int, events: int, outputs: int, output_arity: int, nodes: int, node_arity: int
-):
-    rng = np.random.default_rng(0)
-    data1 = Data(n, rng)
+class Case(ABC):
+    @abstractmethod
+    def generate_data(self):
+        pass
 
-    linear_events = [
-        LinearEvent(m, b) for m, b in rng.uniform(-10, 10, size=(events, 2))
-    ]
 
-    output_events = [
-        CompositeEvent(
+@dataclass
+class CaseVFL(Case):
+    rng: np.random.Generator
+    n: int
+    events: int
+    output_arity: int
+    sensors: int
+    sensor_arity: int
+    noise_std: float
+
+    def __post_init__(self):
+        self.input_events = [
+            LinearEvent(m, b)
+            for m, b in self.rng.uniform(-10, 10, size=(self.events, 2))
+        ]
+        self.output_event = CompositeEvent(
             [
-                linear_events[i]
-                for i in rng.choice(
-                    len(linear_events), size=output_arity, replace=False
+                self.input_events[i]
+                for i in self.rng.choice(
+                    len(self.input_events), size=self.output_arity, replace=False
                 )
             ],
-            rng.standard_normal(output_arity),
+            self.rng.standard_normal(self.output_arity),
         )
-        for _ in range(outputs)
-    ]
+
+    def generate_data(self):
+        data = Data(self.n, self.rng)
+
+        X = [
+            data.get(
+                self.input_events[i * self.sensor_arity : (i + 1) * self.sensor_arity]
+            )
+            for i in range(self.sensors)
+        ]
+        Y = data.get_single(self.output_event) + self.rng.normal(
+            0, self.noise_std, self.n
+        )
+
+        return X, Y
