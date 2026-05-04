@@ -93,3 +93,42 @@ class CaseVFL(Case):
         )
 
         return X, Y
+
+@dataclass
+class CaseHFL(Case):
+    rng: np.random.Generator
+    n: int
+    events: int
+    output_arity: int
+    sensors: int
+    noise_std: float
+
+    def __post_init__(self):
+        self.input_events = [
+            LinearEvent(m, b)
+            for m, b in self.rng.uniform(-10, 10, size=(self.events, 2))
+        ]
+        
+        self.output_event = CompositeEvent(
+            [
+                self.input_events[i]
+                for i in self.rng.choice(
+                    len(self.input_events), size=self.output_arity, replace=False
+                )
+            ],
+            self.rng.standard_normal(self.output_arity),
+        )
+
+    def generate_data(self):
+        data = Data(self.n, self.rng)
+        
+        X_global = data.get(self.input_events)
+        
+        Y_global = data.get_single(self.output_event) + self.rng.normal(
+            0, self.noise_std, self.n
+        )
+
+        X = np.array_split(X_global, self.sensors, axis=1)
+        Y = np.array_split(Y_global, self.sensors)
+
+        return X, Y
