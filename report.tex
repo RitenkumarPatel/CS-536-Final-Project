@@ -1,6 +1,8 @@
 \documentclass{article}
 
 \usepackage{hyperref}
+\usepackage{amssymb}
+\usepackage{amsmath}
 
 \title{CS536 Final Project}
 \author{Author}
@@ -21,6 +23,31 @@ In the first case, each device can hold a subset of the data, recording differen
 This is the problem that \underline{horizontal federated learning} solves \cite{li2020}.
 Alternatively, perhaps each device records some information about the same event, but they hold a disjoint set of features.
 We address this problem with \underline{vertical federated learning} \cite{feng2020}.
+
+\section{Vertical Federated Learning}
+In a general learning problem, we have $\mathbf x\in\mathbb R^m$ as an input vector and we want to learn some function $f:\mathbb R^m\to\mathbb R$ and predict the value $y=f(\mathbf x)$.
+Consider the $k$ party case, where we have $m=\sum_{i=1}^km_i$, and $\mathbf x=\bigoplus_{i=1}^m\mathbf x_i\in\bigoplus_{i=1}^m\mathbb R^{m_i}$.
+Party $i$ can only see $\mathbf x_i,y$, and needs to cooperate with other parties to predict $f(\mathbf x_1\oplus\mathbf x_2)$ without divulging their own data.
+We implement a simplified version of \cite{wan2007} for reasons we discuss later.
+
+For simplicity, consider the case of linear regression.
+Take $f(\mathbf x)=\mathbf x\cdot\mathbf w=\sum_{i=1}^k\mathbf x_i\cdot\mathbf w_i$ for $\mathbf w\in\mathbb R^m$, where $\mathbf w=\sum_{i=1}^k\mathbf w_i\in\bigoplus_{i=1}^m\mathbb R^{m_i}$ and party $i$ only sees $\mathbf w_i$.
+Given some $\mathbf x_i$, $y$, party $i$ will compute and broadcast $\mathbf x_i\cdot\mathbf w_i$, then collect $\hat y=\sum_{i=1}^k\mathbf x_i\cdot\mathbf w_i$ from other parties.
+The goal is to minimize the squared error $\mathcal L=(y-\hat y)^2$.
+
+To train this model, some data $\mathbf X=(\mathbf x^1,\ldots,\mathbf x^N)^\intercal\in\mathbb R^{N\times m}$ and output $\mathbf y(y_1,\ldots,y_N)^\intercal\in\mathbb R^N$ is partitioned to $\mathbf X_i\in\mathbb R^{N\times m_1}$.
+Party $i$ obtains $\mathbf X_i$, $\mathbf y$, and initializes $\mathbf w_i$ to a random vector.
+Then we run several rounds of gradient descent, adjusting $w_l$ for each feature $l\in[m]$ as follows.
+\begin{align}
+    \frac{\partial\mathcal L}{\partial w_l}=&
+    \frac{\partial}{\partial w_l}\sum_{i=1}^N\left(\sum_{j=1}^m \mathbf x_i(j)\cdot w_j-y_i\right)^2\\
+    =&\sum_{i=1}^N
+    2\mathbf x_i(l)\left(\sum_{j=1}^m \mathbf x_i(j)\cdot w_j-y_i\right)\\
+    =&\sum_{i=1}^N2\mathbf x_i(l)(\mathbf x_i\cdot\mathbf w-y_i)
+\end{align}
+
+The key insight here is that the $\mathbf x_i\cdot\mathbf w-y_i$ can be computed without view of each individual feature, thus updating $w_l$ only requires $\mathbf x_i(l)$.
+The party that needs to update $w_l$ also owns $\mathbf x_i(l)$, so federated gradient descent is possible.
 
 
 \bibliographystyle{plain}
