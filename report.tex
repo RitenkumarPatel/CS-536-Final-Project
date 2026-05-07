@@ -49,6 +49,11 @@ Then we run several rounds of gradient descent, adjusting $w_l$ for each feature
 The key insight here is that the $\mathbf x_i\cdot\mathbf w-y_i$ can be computed without view of each individual feature, thus updating $w_l$ only requires $\mathbf x_i(l)$.
 The party that needs to update $w_l$ also owns $\mathbf x_i(l)$, so federated gradient descent is possible.
 
+\subsection{Gradient Inversion}
+Upon closer inspection, the above method is functionally equivalent to gradient descent linear regression, but we claimed that it allowed data to be hidden from other parties.
+
+\textbf{WIP}
+
 
 \bibliographystyle{plain}
 \bibliography{report.bib}
