@@ -132,3 +132,60 @@ class CaseHFL(Case):
         Y = np.array_split(Y_global, self.sensors)
 
         return X, Y
+
+@dataclass
+class CaseHFL_Heterogenous:
+    rng: np.random.Generator
+    n: int
+    events: int
+    output_arity: int
+    sensors: int
+    noise_std: float
+    heterogeneity_std: float = 1.0  
+
+    def __post_init__(self):
+        self.input_events = [
+            LinearEvent(m, b)
+            for m, b in self.rng.uniform(-10, 10, size=(self.events, 2))
+        ]
+        
+        active_indices = self.rng.choice(
+            len(self.input_events), size=self.output_arity, replace=False
+        )
+        active_events = [self.input_events[i] for i in active_indices]
+
+        base_weights = self.rng.standard_normal(self.output_arity)
+
+        self.sensor_output_events = []
+        for _ in range(self.sensors):
+            local_weights = base_weights + self.rng.normal(
+                0, self.heterogeneity_std, self.output_arity
+            )
+            self.sensor_output_events.append(
+                CompositeEvent(active_events, local_weights)
+            )
+
+    def generate_data(self):
+        X_hetero = []
+        Y_hetero = []
+        
+        if self.n % self.sensors != 0:
+            raise ValueError(
+                f"Total samples (n={self.n}) must be perfectly divisible by the "
+                f"number of sensors ({self.sensors}) to ensure balanced heterogeneous data."
+            )
+        num_samples_per_sensor = self.n // self.sensors
+
+        for i in range(self.sensors):
+
+            local_data = Data(num_samples_per_sensor, self.rng)
+            X_local = local_data.get(self.input_events)
+            
+            Y_local = local_data.get_single(self.sensor_output_events[i]) + self.rng.normal(
+                0, self.noise_std, num_samples_per_sensor
+            )
+            
+            X_hetero.append(X_local)
+            Y_hetero.append(Y_local)
+
+        return X_hetero, Y_hetero
