@@ -27,8 +27,8 @@ We address this problem with \underline{vertical federated learning} \cite{feng2
 \section{Vertical Federated Learning}
 In a general learning problem, we have $\mathbf x\in\mathbb R^m$ as an input vector and we want to learn some function $f:\mathbb R^m\to\mathbb R$ and predict the value $y=f(\mathbf x)$.
 Consider the $k$ party case, where we have $m=\sum_{i=1}^km_i$, and $\mathbf x=\bigoplus_{i=1}^m\mathbf x_i\in\bigoplus_{i=1}^m\mathbb R^{m_i}$.
-Party $i$ can only see $\mathbf x_i,y$, and needs to cooperate with other parties to predict $f(\mathbf x_1\oplus\mathbf x_2)$ without divulging their own data.
-We implement a simplified version of \cite{wan2007} for reasons we discuss later.
+Party $i$ can only see $\mathbf x_i,y$, and needs to cooperate with other parties to predict $f(\mathbf x)$ without divulging their own data.
+We implement a simplified version of \cite{wan2007}, as there is a data leakage attack which the extra random vector in said paper's implementation does not directly address.
 
 For simplicity, consider the case of linear regression.
 Take $f(\mathbf x)=\mathbf x\cdot\mathbf w=\sum_{i=1}^k\mathbf x_i\cdot\mathbf w_i$ for $\mathbf w\in\mathbb R^m$, where $\mathbf w=\sum_{i=1}^k\mathbf w_i\in\bigoplus_{i=1}^m\mathbb R^{m_i}$ and party $i$ only sees $\mathbf w_i$.
@@ -50,9 +50,89 @@ The key insight here is that the $\mathbf x_i\cdot\mathbf w-y_i$ can be computed
 The party that needs to update $w_l$ also owns $\mathbf x_i(l)$, so federated gradient descent is possible.
 
 \subsection{Gradient Inversion}
-Upon closer inspection, the above method is functionally equivalent to gradient descent linear regression, but we claimed that it allowed data to be hidden from other parties.
+Upon closer inspection, the above method is functionally equivalent to gradient descent linear regression, and we claimed that it allowed data to be hidden from other parties.
+Note that at each step, every party broadcasts $\mathbf x_i\cdot \mathbf w_t$, where $\mathbf x_i$ is the $i$th sample in the training set and $\mathbf w_t$ is their weight at time $t$.
 
-\textbf{WIP}
+Suppose there are $N$ samples in the training set $\mathbf x_i\in\mathbb R^m$, and we record $T$ training iterations of $\mathbf x_i\cdot\mathbf w_t$ for $i\in[N]$ and $t\in[T]$.
+Then we obtain the following matrix of inner products
+\begin{equation}
+    A=
+    \begin{bmatrix}
+        \mathbf x_1\cdot\mathbf w_1 & \cdots & \mathbf x_1\cdot\mathbf w_T\\
+        \mathbf x_2\cdot\mathbf w_1 & \cdots & \mathbf x_2\cdot\mathbf w_T \\
+        \vdots & \ddots & \vdots\\
+        \mathbf x_N\cdot\mathbf w_1 & \cdots & \mathbf x_N\cdot\mathbf w_T
+    \end{bmatrix}
+    =\begin{bmatrix}
+        \mathbf x_1^\intercal\\
+        \mathbf x_2^\intercal\\
+        \vdots\\
+        \mathbf x_N^\intercal\\
+    \end{bmatrix}
+    \begin{bmatrix}
+        \mathbf w_1&
+        \mathbf w_2&
+        \cdots&
+        \mathbf w_T
+    \end{bmatrix}
+    =\mathbf X\mathbf W,
+\end{equation}
+where $\mathbf X\in\mathbb R^{N\times m}$ is the data matrix and $\mathbf W\in\mathbb R^{m\times T}$ is the weight matrix (each column is from a different gradient descent iteration).
+This brings up the question if it is possible to recover $\mathbf X$ and $\mathbf W$, up to some linear transformation?
+Such a protocol would effectively leak the training data, defeating the purpose of federated gradient descent.
+
+Pattern matching the simplest decomposition technique we know, let's apply SVD to $A=U\Sigma V^\intercal$, where $U\in\mathbb R^{N\times r}$, $\Sigma\in\mathbb R^{r\times r}$, and $V\in\mathbb R^{T\times r}$.
+Knowing $A$ has rank at most $m$, all but at most $m$ singular values in $\Sigma$ will be effectively zero, thus we can drop all columns of $U$ and $V$ after this point.
+By inspection, $U$ looks similar to $\mathbf X$ and $V$ to $\mathbf W$, up to some feature selection and scaling in $\Sigma$.
+\textbf{Here I'm lost. Ideally we could reconstruct $\mathbf Y$ to the same accuracy $\mathbf w\in\mathbf W$ predicts it from $\mathbf X$}
+
+\subsection{Data}
+We randomly generate 1000 data points with $\mathbf x\in\mathbb R^{100}$ and split the features among 5 parties (each holding 20 entries of $\mathbf x$ per case).
+The function we want to predict is of the form $f(\mathbf x)=\mathbf w\cdot\mathbf x+\mathcal N(0,0.01)$, where $\mathbf w$ is nonzero for half of it's entries (randomly pick half of the features to matter, and other half to be irrelevant).
+
+Running ridge regression with $\alpha=0.5$, followed by 300000 iterations of federated gradient descent using $\eta=1/10000$, we obtain the following losses
+\begin{verbatim}
+>>> Ridge Regression
+Train Error: 8.741507343219926e-05
+Test Error: 0.00011775791937313928
+>>> Federated Gradient descent
+Train 9.649788755061076e-05
+Test 0.00012726750026878123
+\end{verbatim}
+
+Now we attempt to perform a gradient inversion attack. Recording $A$ from earlier, we perform SVD and obtain singular values that look like the following
+\begin{verbatim}
+[2.46275299e+04 1.09897010e+03 4.37783576e+02 1.53447976e+02
+ 6.93439793e+01 5.09262877e+01 1.08678067e+01 5.87973330e+00
+ 2.87236217e+00 1.36803940e+00 6.79608095e-01 4.18334821e-01
+ 1.54991701e-01 8.56768728e-02 3.38512748e-02 2.03707584e-02
+ 6.41886637e-03 2.42541993e-03 1.21015032e-03 1.02573618e-03
+ 1.12581855e-11 1.01822494e-11 9.73596307e-12 8.90413291e-12
+ 7.37457279e-12 7.14802986e-12 5.74554355e-12 4.78937451e-12
+ 4.53135626e-12 4.09240952e-12 3.95514437e-12 3.78223281e-12
+ 3.64570819e-12 3.26467281e-12 3.02962414e-12 2.79186226e-12
+ 2.78343760e-12 2.47092343e-12 2.39865680e-12 2.37340873e-12
+ 2.06942979e-12 1.77723191e-12 1.77723191e-12 1.77723191e-12
+ 1.77723191e-12 1.77723191e-12 1.77723191e-12 1.77723191e-12
+ 1.77723191e-12 1.77723191e-12 1.77723191e-12 1.77723191e-12
+ 1.77723191e-12 1.77723191e-12 1.77723191e-12 1.77723191e-12
+ ...
+\end{verbatim}
+
+Observe that only the first $20$ singular values are actually significant, indicating we have some signal on the 20 columns of the data matrix $\mathbf X$.
+Conjecturing that the last row of $\Sigma V^\intercal$ gives the final weights of the gradient descent iteration, we attempt to reconstruct $\mathcal Y$ from the SVD.
+Unfortunately, this gives quite terrible loss, so we need to go back to the drawing board.
+
+\begin{verbatim}
+loop
+    ...
+    recovered_features.append(U_r)
+    recovered_weights.append(np.diag(S_r) @ V_r.T)[:, -1]
+Y_hat = sum(recovered_features[p] @ recovered_weights[p] for p in range(parties))
+mean_squared_error(Y_hat, Y_atk)
+> 2650.493480699639
+\end{verbatim}
+
 
 
 \bibliographystyle{plain}
