@@ -134,7 +134,7 @@ class CaseHFL(Case):
         return X, Y
 
 @dataclass
-class CaseHFL_Heterogenous:
+class CaseHFL_Heterogeneous:
     rng: np.random.Generator
     n: int
     events: int
