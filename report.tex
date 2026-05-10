@@ -3,6 +3,10 @@
 \usepackage{hyperref}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage[normalem]{ulem}
+\usepackage{graphicx}
+
+\graphicspath{{figures}}
 
 \title{CS536 Final Project}
 \author{Author}
@@ -98,8 +102,38 @@ Then we run several rounds of gradient descent, adjusting $w_l$ for each feature
 The key insight here is that the $\mathbf x_i\cdot\mathbf w-y_i$ can be computed without view of each individual feature, thus updating $w_l$ only requires $\mathbf x_i(l)$.
 The party that needs to update $w_l$ also owns $\mathbf x_i(l)$, so federated gradient descent is possible.
 
+\subsection{Experiments}
+We randomly generate 1000 data points with $\mathbf x\in\mathbb R^{100}$ and split the features among 5 parties (each holding 20 entries of $\mathbf x$ per case).
+The function we want to predict is of the form $f(\mathbf x)=\mathbf w\cdot\mathbf x+\mathcal N(0,0.01)$, where $\mathbf w$ is nonzero for half of it's entries (randomly pick half of the features to matter, and other half to be irrelevant).
+For now, we take each coordinate of $\mathbf x$ to be i.i.d. Gaussian.
+We compare federated gradient descent with learning rate $\eta=1/10000$ and $T=300000$ (iterations) against Ridge regression with $\alpha=0.5$.
+\begin{verbatim}
+>>> Ridge regression
+Train Error: 8.745205646168433e-05
+Test Error: 0.00011756193048215462
+>>> Federated gradient descent
+Train 9.016817380303679e-05
+Test 0.0001197005474922649
+\end{verbatim}
+
+This is not very surprising, since the above method is functionally equivalent to linear regression with gradient descent.
+One natural question to ask is \uline{do we need to broadcast weights every iteration}?
+Here, we have each party only broadcast an updated $\mathbf w\cdot\mathbf x$ inner product every $k$ rounds.
+
+\begin{figure}[h]
+    \center
+    \includegraphics[width=200px]{fgd_delay}
+    \caption{Graph of test and train MSE against gradient update frequency. Each party shares updated $\mathbf w\cdot\mathbf x$ every $k$ rounds. Note that model diverges for $k\ge 4$.}
+\end{figure}
+
+Looking at this graph, we observe that updating the gradient less often seems to perform better.
+We note that locally at a point, the gradient does not change much, so this can be seen as some approximation of a larger learning rate.
+Rerunning with $\eta=1/5000$ (doubling the learning rate), $k\ge 2$ diverges.
+
+
 \subsection{Gradient Inversion}
-Upon closer inspection, the above method is functionally equivalent to gradient descent linear regression, and we claimed that it allowed data to be hidden from other parties.
+Earlier, we claimed that this method allowed data to be hidden from other parties.
+However, this is not exactly true.
 Note that at each step, every party broadcasts $\mathbf x_i\cdot \mathbf w_t$, where $\mathbf x_i$ is the $i$th sample in the training set and $\mathbf w_t$ is their weight at time $t$.
 
 Suppose there are $N$ samples in the training set $\mathbf x_i\in\mathbb R^m$, and we record $T$ training iterations of $\mathbf x_i\cdot\mathbf w_t$ for $i\in[N]$ and $t\in[T]$.
@@ -133,23 +167,20 @@ Such a protocol would effectively leak the training data, defeating the purpose 
 Pattern matching the simplest decomposition technique we know, let's apply SVD to $A=U\Sigma V^\intercal$, where $U\in\mathbb R^{N\times r}$, $\Sigma\in\mathbb R^{r\times r}$, and $V\in\mathbb R^{T\times r}$.
 Knowing $A$ has rank at most $m$, all but at most $m$ singular values in $\Sigma$ will be effectively zero, thus we can drop all columns of $U$ and $V$ after this point.
 By inspection, $U$ looks similar to $\mathbf X$ and $V$ to $\mathbf W$, up to some feature selection and scaling in $\Sigma$.
-\textbf{Here I'm lost. Ideally we could reconstruct $\mathbf Y$ to the same accuracy $\mathbf w\in\mathbf W$ predicts it from $\mathbf X$}
+\uline{Simply taking SVD is not sufficient to convincingly recover the features, as we show later, but it can act as a signal for how much information we have collected on the input data.}
+\textit{Due to time constraints, we were not able to successfully implement a complete gradient inversion attack from first principles.}
 
-\subsection{Data}
+\subsubsection{SVD Experiments}
+To investigate the effectiveness of such an attack, we restrict our view to uncorrelated features with fixing all parameters but selection of gradient descent iterations.
+The main question we want to answer is \uline{how does the SVD behave when varying how iterations are collected?}
+
 We randomly generate 1000 data points with $\mathbf x\in\mathbb R^{100}$ and split the features among 5 parties (each holding 20 entries of $\mathbf x$ per case).
 The function we want to predict is of the form $f(\mathbf x)=\mathbf w\cdot\mathbf x+\mathcal N(0,0.01)$, where $\mathbf w$ is nonzero for half of it's entries (randomly pick half of the features to matter, and other half to be irrelevant).
 
-Running ridge regression with $\alpha=0.5$, followed by 300000 iterations of federated gradient descent using $\eta=1/10000$, we obtain the following losses
-\begin{verbatim}
->>> Ridge Regression
-Train Error: 8.741507343219926e-05
-Test Error: 0.00011775791937313928
->>> Federated Gradient descent
-Train 9.649788755061076e-05
-Test 0.00012726750026878123
-\end{verbatim}
+Running 100000 iterations of federated gradient descent with $\eta=1/10000$, we obtain training error of approximately $0.0009679$.
 
-Now we attempt to perform a gradient inversion attack. Recording $A$ from earlier, we perform SVD and obtain singular values that look like the following
+
+Recording the inner products $\mathbf x_i\cdot w_t$ every 100 iterations in $A$ from earlier, we perform SVD and obtain singular values that look like the following
 \begin{verbatim}
 [2.46275299e+04 1.09897010e+03 4.37783576e+02 1.53447976e+02
  6.93439793e+01 5.09262877e+01 1.08678067e+01 5.87973330e+00
@@ -169,8 +200,17 @@ Now we attempt to perform a gradient inversion attack. Recording $A$ from earlie
 \end{verbatim}
 
 Observe that only the first $20$ singular values are actually significant, indicating we have some signal on the 20 columns of the data matrix $\mathbf X$.
+Varying the frequency at which we record gradients, it is clear that the number of iterations is directly correlated with dimension of the reconstructed space.
+
+\begin{figure}[h]
+    \center
+    \includegraphics[width=250px]{gia_rank}
+    \caption{Plot of rank against interval for all 5 parties. Rank defined as number of singular values greater than 1e-10. Gradient is recorded every $k$ iterations, where $k=\mathrm{Interval}$.}
+\end{figure}
+
 Conjecturing that the last row of $\Sigma V^\intercal$ gives the final weights of the gradient descent iteration, we attempt to reconstruct $\mathcal Y$ from the SVD.
-Unfortunately, this gives quite terrible loss, so we need to go back to the drawing board.
+Unfortunately, this gives quite terrible loss, so we need something more advanced to recover usefule features.
+We note that averaging over all the rows of $\Sigma V^\intercal$ does not help.
 
 \begin{verbatim}
 loop
