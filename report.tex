@@ -128,8 +128,7 @@ Here, we have each party only broadcast an updated $\mathbf w\cdot\mathbf x$ inn
 
 Looking at this graph, we observe that updating the gradient less often seems to perform better.
 We note that locally at a point, the gradient does not change much, so this can be seen as some approximation of a larger learning rate.
-Rerunning with $\eta=1/5000$ (doubling the learning rate), $k\ge 2$ diverges.
-
+Rerunning with $\eta=1/5000$ (doubling the learning rate), only converges for $k=1$, but increases loss by an order of 10.
 
 \subsection{Gradient Inversion}
 Earlier, we claimed that this method allowed data to be hidden from other parties.
@@ -222,7 +221,30 @@ mean_squared_error(Y_hat, Y_atk)
 > 2650.493480699639
 \end{verbatim}
 
+\subsection{Federated Averaging}
+To combat this attack, we can have each party train a model train offline (with a limited feature set), then combine them at inference time.
+Thus no information is passed between the models, apart from their best guess at what $\mathbf Y$ is, and the gradient inversion attack no longer works.
+We effectively treat the output of each model as some feature and run another layer of regression.
+This technique is noticeably worse, but still better than simply guessing randomly
+\begin{verbatim}
+>>> Ridge regression
+Train Error: 8.745205646168433e-05
+Test Error: 0.00011756193048215462
+>>> Federated averaging
+Train MSE: 69.42138779044436
+Test MSE: 86.31839127385526
+Zero: 1317.2347367455047
+\end{verbatim}
 
+Now we consider \uline{how does the error scale as we increase the data each party receives}? (Allowing for some redundancy, where multiple clients receive the same feature).
+Currently, we split 100 features equally among 5 parties, each receiving 20 of them.
+If we increase the multiplier of features that each party receives, we see a linear trend in the error.
+
+\begin{figure}[h]
+    \center
+    \includegraphics[width=200px]{fgd_avg}
+    \caption{Test and train MSE against Per-party feature arity multplier}
+\end{figure}
 
 \bibliographystyle{plain}
 \bibliography{report.bib}
