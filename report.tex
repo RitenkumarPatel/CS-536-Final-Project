@@ -238,12 +238,13 @@ Zero: 1317.2347367455047
 
 Now we consider \uline{how does the error scale as we increase the data each party receives}? (Allowing for some redundancy, where multiple clients receive the same feature).
 Currently, we split 100 features equally among 5 parties, each receiving 20 of them.
+From the graph, we see that averaging results performs significantly better than simply taking the best party.
 If we increase the multiplier of features that each party receives, we see a linear trend in the error.
 
 \begin{figure}[h]
     \center
     \includegraphics[width=200px]{fgd_avg}
-    \caption{Test and train MSE against Per-party feature arity multplier}
+    \caption{Test and train MSE for averaged and best party against per-party feature arity multplier}
 \end{figure}
 
 \bibliographystyle{plain}
