@@ -5,6 +5,7 @@
 \usepackage{amsmath}
 \usepackage[normalem]{ulem}
 \usepackage{graphicx}
+\usepackage{float}
 
 \graphicspath{{figures}}
 
@@ -73,11 +74,118 @@ TODO: explination \quad of \quad mocha
     \item How does the training dataset size affect performance?
     \item How does the number of sensors affect performance?
     \item How does the output arity affect performance?
-    \item How does the number of adaptation steps in MAML affect the test MSE?
-    \item What is the rate of convergence for these models?
 \end{enumerate}
 
-\includegraphics[width=200px]{MAML_datasetsize_homogeneous.png}
+\subsection{FedAVG Results}
+
+The base configuration for following plots are generated from 1000 data points, 100 features, an output ariity of 50, and 10 sensors.
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FedAvg_datasetsize_homogeneous.png}
+    \caption{Test MSE for FedAvg on homogeneous data versus dataset size. We see that more training data leads to higher accuracy.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FedAvg_datasetsize_heterogeneous.png}
+    \caption{Test MSE for FedAvg on heterogeneous data versus dataset size. Notice that the test MSE is significantly higher than in the homogeneous case, in line with our hypothesis. After about 200 datapoints, the test MSE stabilizes. This is likely becuase FedAvg can
+    not capture the underlying distribution since the data is non-IID.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FedAvg_arity_homogeneous.png}
+    \caption{Test MSE for FedAvg on homogeneous data versus output arity. The test MSE increases as the number of significant features increases. This is likely because the regularization in our FedAvg algorithm is able to clear the noisy features. Therefore
+    the function with less features is easier to learn.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FedAvg_sensors_homogeneous.png}
+    \caption{Test MSE for FedAvg on homogeneous data versus number of sensors. We see that splitting the data between more sensors makes the problem more difficult.}
+\end{figure}
+
+\subsection{MAML Results}
+
+The base config for the following plots is a dataset size of 1000, 200 features, output arity of 50, and 10 sensors.
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{MAML_datasetsize_homogeneous.png}
+    \caption{Test MSE for MAML on homogeneous data versus dataset size. More training data leads to higher accuracy.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{MAML_datasetsize_heterogeneous.png}
+    \caption{Test MSE for MAML on heterogeneous data versus dataset size. The performance for heterogeneous data is very similar to homogeneous data.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=200px]{MAML_arity_homoogeneous.png}
+    \caption{Test MSE for MAML on homogeneous data versus arity. Higher arity leads to better performance, which is opposite to the relationship we saw with FedAvg. This is probably because more features impacting the label 
+    provides the model with more opportunity to see through the noise. }
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=200px]{MAML_arity_heterogeneous.png}
+    \caption{Test MSE for MAML on heterogeneous data versus arity. This has the same relationship as the previous graph.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{MAML_sensors_homoogeneous.png}
+    \caption{Test MSE for MAML on homogeneous data versus the number of sensors. Similar to FedAvg, more sensors leads to worse performance because the same amount of data is shared between more sensors.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{MAML_sensors_heterogeneous.png}
+    \caption{Test MSE for MAML on heterogeneous data versus the number of sensors. This has the same relationship as the previous graph, but this has much less variability.}
+\end{figure}
+
+\subsection{FMTL Results}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FTML_datasetsize_homogeneous.png}
+    \caption{Test MSE for FMTL on homogeneous data versus the dataset size.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FTML_datasetsize_heterogeneous.png}
+    \caption{Test MSE for FMTL on heterogeneous data versus the dataset size.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FMTL_arity_homogeneous.png}
+    \caption{Test MSE for FMTL on homogeneous data against output arity. There is no significant relationship between output arity and test MSE.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FMTL_arity_heterogeneous.png}
+    \caption{Test MSE for FMTL on heterogeneous data against output arity. This, like previous graph, has no significant relationship.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FMTL_sensors_homogeneous.png}
+    \caption{Test MSE for FMTL on homogeneous data against number of sensors. A larger number of sensors leads to better performance. This is the only algorithm that has exhibited this relationship. This is because the MOCHA algorithm trains an entirely different model for each sensor. MAML tries to 
+    generate a 'generic' model that gets weaker as more sensors create a more diverse underlying distribution.}
+\end{figure}
+
+\begin{figure}[H]
+    \center
+    \includegraphics[width=250px]{FMTL_sensors_heterogeneous.png}
+    \caption{Test MSE for FMTL on heterogeneous data. This has the same relationship as the previous graph.}
+\end{figure}
+
 
 \section{Vertical Federated Learning}
 In a general learning problem, we have $\mathbf x\in\mathbb R^m$ as an input vector and we want to learn some function $f:\mathbb R^m\to\mathbb R$ and predict the value $y=f(\mathbf x)$.
