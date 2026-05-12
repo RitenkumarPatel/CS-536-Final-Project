@@ -63,16 +63,21 @@ Our implementation of MAML:
 Note that we are taking the gradient of a gradient here to find the optimal meta parameter $\theta$.
 
 Federated Multi Task Learning (FTML) aims to find a unique model for each sensor with the assumption that they are working on different but related learning tasks. We implemented the MOCHA algorithm \cite{smith2018} 
-\[
-TODO: explination \quad of \quad mocha
-\]
+
+\begin{enumerate}
+    \item Initialize a weight matrix $W \in \mathbb{R}^{d \times m}$ and a task relationship matrix $\Sigma$.
+    \item \textbf{Inner Loop:} Each sensor runs Stochastic Dual Coordinate Ascent (SDCA) on its local data to find updates for its specific weights $W_t$.
+    \item Sensors communicate these local updates back to the central server to update the shared weight matrix $W$.
+    \item \textbf{Outer Loop:} Based on the updated $W$, the server updates the task relationship matrix $\Sigma$. 
+    \item Repeat steps 2--4 for some number of iterations to refine both individual models and the global task relationships.
+\end{enumerate}
 
 \subsection{Questions of Interest}
 \begin{enumerate}
     \item FedAvg generates one global model, so we expect it to perform poorly on IID data. 
     \item FMTL and MAML are different strategies for tackling heterogeneous distributed data, under what conditions does FTML outperform MAML and vice versa?
     \item How does the training dataset size affect performance?
-    \item How does the number of sensors affect performance?
+    \item How does the numberx of sensors affect performance?
     \item How does the output arity affect performance?
 \end{enumerate}
 
