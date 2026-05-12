@@ -4,12 +4,14 @@ from dataclasses import dataclass
 import numpy as np
 
 
+# Abstraction for a generic random variable
 class Event(ABC):
     @abstractmethod
     def value(self, data: "Data") -> np.ndarray:
         pass
 
 
+# Container to hold samples, given some "definition" of a random variable
 class Data:
     def __init__(self, n: int, rng: np.random.Generator):
         self.n = n
@@ -28,6 +30,7 @@ class Data:
         return np.array([self.get_single(event) for event in events])
 
 
+# Gaussian event
 class LinearEvent(Event):
     def __init__(self, m: float, b: float):
         self.m = m
@@ -38,6 +41,7 @@ class LinearEvent(Event):
         return self.m * x + self.b
 
 
+# Linear combination of some events
 class CompositeEvent(Event):
     def __init__(self, events: Sequence[Event], weights: np.ndarray):
         self.events = events
@@ -48,6 +52,9 @@ class CompositeEvent(Event):
         return self.weights @ matrix
 
 
+# Generic class for different test cases.
+# Initialization randomly sets parameters
+# generate_data should sample from the same distribution each call!
 class Case(ABC):
     @abstractmethod
     def generate_data(self):
@@ -235,4 +242,3 @@ class CaseHFL_Heterogeneous:
             Y_hetero.append(Y_local)
 
         return X_hetero, Y_hetero
-
